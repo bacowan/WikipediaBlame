@@ -3,11 +3,14 @@ import './App.css'
 import { Err, Ok, Result } from './Result';
 import * as Diff from 'diff';
 import BlameItem from './BlameItem';
+import DiffElement from './DiffElement';
+import Revision from './Revision';
 
 function App() {
 
   const [articleName, setArticleName] = useState("");
   const [articleSource, setArticleSource] = useState<BlameItem[]>([]);
+  const [selectedRevision, setSelectedRevision] = useState<Revision | null>();
 
   async function Blame(name: string) {
     const revisions = await getRevisionsForArticle(name);
@@ -22,17 +25,12 @@ function App() {
   }
 
   const formattedBlames = useMemo(() => {
-    return articleSource.map((b, i) => {
-      let text;
-      if (b.type === "remove") {
-        text = "\u00A0\u00A0\u00A0";
-      }
-      else {
-        text = b.text;
-      }
-      return <span key={i} className={'blame-' + b.type}>{text}</span>
-    })
-  }, [articleSource]);
+    return articleSource.map((b, i) => <DiffElement
+      key={i}
+      blameItem={b}
+      isSelectedRevision={b.revision != null && selectedRevision != null && b.revision.id === selectedRevision.id}
+      setSelectedRevision={setSelectedRevision}/>)
+  }, [articleSource, selectedRevision]);
 
   return (
     <>
@@ -57,15 +55,16 @@ function App() {
   )
 }
 
-function getBlameItems(oldRev: string, newRev: string): BlameItem[] {
-  const diff = Diff.diffChars(oldRev, newRev);
+function getBlameItems(oldRev: Revision, newRev: Revision): BlameItem[] {
+  const diff = Diff.diffChars(oldRev.content, newRev.content);
   return diff.map(d => ({
     text: d.value,
-    type: d.added ? "add" : d.removed ? "remove" : "unchanged"
+    type: d.added ? "add" : d.removed ? "remove" : "unchanged",
+    revision: d.added || d.removed ? newRev : null
   }));
 }
 
-async function getRevisionsForArticle(articleName: string) : Promise<Result<string[], string>> {
+async function getRevisionsForArticle(articleName: string) : Promise<Result<Revision[], string>> {
   articleName = articleName.trim();
   // TODO: loading spinner
 
@@ -79,14 +78,20 @@ async function getRevisionsForArticle(articleName: string) : Promise<Result<stri
     const json = await response.json();
     const revisions = getRevisionsFromFetch(json);
     // TODO: Error handling
-    return(Ok<string[]>(revisions));
+    return(Ok<Revision[]>(revisions));
   }
 }
 
-function getRevisionsFromFetch(jsonObj: any) : string[] {
+function getRevisionsFromFetch(jsonObj: any) : Revision[] {
   const pages = jsonObj?.query?.pages;
   const pageId = Object.keys(pages)[0];
-  return (pages[pageId].revisions as []).map(r => r["*"] as string);
+  return (pages[pageId].revisions as any[]).map(r => ({
+    id: r["revid"] as number,
+    content: r["*"] as string,
+    timestamp: new Date(r["timestamp"]),
+    user: r["user"] as string,
+    comment: r["comment"] as string
+  }));
 }
 
 export default App

@@ -11,15 +11,6 @@ textarea {
   resize: none;
 }
 
-.blame-add {
-  background-color: green;
-}
-
-.blame-remove {
-  background-color: red;
-  width: 1em;
-}
-
 .search-area {
   display: flex;
   flex-direction: row;
