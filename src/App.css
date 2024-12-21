@@ -8,6 +8,10 @@
   height: 100vh;
 }
 
+textarea {
+  resize: none;
+}
+
 .search-area {
   display: flex;
   flex-direction: row;
