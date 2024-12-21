@@ -1,5 +1,4 @@
 #root {
-  max-width: 1280px;
   width: 100%;
   text-align: center;
   margin: 0;
@@ -10,6 +9,15 @@
 
 textarea {
   resize: none;
+}
+
+.blame-add {
+  background-color: green;
+}
+
+.blame-remove {
+  background-color: red;
+  width: 1em;
 }
 
 .search-area {
@@ -28,10 +36,30 @@ textarea {
   display: flex;
   flex-direction: column;
   flex: 1;
+  overflow-y: auto;
+}
+
+.diff-text {
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.main-left {
+  flex: 2 0 0;
+}
+
+.main-right {
+  flex: 1 0 0;
 }
 
 .main-left, .main-right {
-  flex: 1;
+  overflow-y: scroll;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #575757;
+  border-radius: 0.5em;
+  word-wrap: break-word;
 }
 
 @media (min-width: 600px) {
@@ -40,10 +68,12 @@ textarea {
   }
 
   .main-left {
-    flex: 75;
+    flex: 0 0 calc(75% - 2px);
+    max-width: calc(75% - 2px);
   }
 
   .main-right {
-    flex: 25;
+    flex: 0 0 calc(25% - 2px);
+    max-width: calc(25% - 2px);
   }
 }
