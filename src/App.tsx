@@ -5,12 +5,13 @@ import * as Diff from 'diff';
 import BlameItem from './BlameItem';
 import DiffElement from './DiffElement';
 import Revision from './Revision';
+import RevisionDetails from './RevisionDetails';
 
 function App() {
 
   const [articleName, setArticleName] = useState("");
   const [articleSource, setArticleSource] = useState<BlameItem[]>([]);
-  const [selectedRevision, setSelectedRevision] = useState<Revision | null>();
+  const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
 
   async function Blame(name: string) {
     const revisions = await getRevisionsForArticle(name);
@@ -49,7 +50,9 @@ function App() {
             {formattedBlames}
           </p>
         </div>
-        <div className='main-right'/>
+        <div className='main-right'>
+          <RevisionDetails selectedRevision={selectedRevision}/>
+        </div>
       </div>
     </>
   )
