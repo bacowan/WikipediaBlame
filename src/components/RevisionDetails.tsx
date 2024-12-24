@@ -1,4 +1,4 @@
-import Revision from "./Revision";
+import Revision from "../structures/Revision";
 
 interface RevisionDetailsProps {
     selectedRevision: Revision | null
