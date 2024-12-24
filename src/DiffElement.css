@@ -6,7 +6,7 @@
     background-color: green;
 }
 
-.blame-add:hover {
+.blame-add.hovered {
     background-color: darkgreen;
 }
 
@@ -15,7 +15,7 @@
     width: 1em;
 }
 
-.blame-remove:hover {
+.blame-remove.hovered {
     background-color: darkred;
 }
 
