@@ -1,11 +1,14 @@
 import { Err, Ok, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
 
-export async function getRevisionsForArticle(articleName: string) : Promise<Result<Revision[], string>> {
+export async function getRevisionsForArticle(articleName: string, fromRevId: number | null) : Promise<Result<Revision[], string>> {
     articleName = articleName.trim();
     // TODO: loading spinner
   
-    const url = "https://en.wikipedia.org/w/api.php?action=query&titles=" + encodeURI(articleName) + "&prop=revisions&rvprop=ids|content|timestamp|user|comment&rvlimit=50&format=json&origin=*";
+    let url = "https://en.wikipedia.org/w/api.php?action=query&titles=" + encodeURI(articleName) + "&prop=revisions&rvprop=ids|content|timestamp|user|comment&rvlimit=50&format=json&origin=*";
+    if (fromRevId !== null) {
+        url += "&rvstartid=" + fromRevId;
+    }
     const response = await fetch(url);
     if (!response.ok) {
       return Err<string>("failed to fetch");

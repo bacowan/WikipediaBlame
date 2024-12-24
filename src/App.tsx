@@ -9,31 +9,41 @@ import SearchProgressBar, { Progress } from './components/SearchProgressBar';
 import { getBlameItems } from './utils/Blame';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
 
+interface ArticleSource {
+  blameItems: BlameItem[],
+  oldestComparedRevId: number | null
+}
+
 function App() {
 
   const [articleName, setArticleName] = useState("");
-  const [articleSource, setArticleSource] = useState<BlameItem[]>([]);
+  const [articleSource, setArticleSource] = useState<ArticleSource>({blameItems: [], oldestComparedRevId: null});
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
+  const [latestRev, setLatestRev] = useState<Revision | null>(null);
 
   async function Blame(name: string) {
     setDiffProgress({state: "indeterminate"})
-    const revisions = await getRevisionsForArticle(name);
+    const revisions = await getRevisionsForArticle(name, articleSource.oldestComparedRevId);
 
     if (!revisions.ok) {
       // TODO: Error handling
     }
     else {
-      await getBlameItems(revisions.value, (completed, total, blames) => {
+      setLatestRev((r) => r === null ? revisions.value[0] : r);
+      await getBlameItems(latestRev, revisions.value, (completed, total, blames, oldestComparedRevId) => {
         setDiffProgress({completed, total, state: "determinate"});
-        setArticleSource(blames);
+        setArticleSource({
+          blameItems: blames,
+          oldestComparedRevId
+        });
       });
     }
   }
 
   const formattedBlames = useMemo(() => {
-    return articleSource.map((b, i) => <DiffElement
+    return articleSource.blameItems.map((b, i) => <DiffElement
       key={i}
       blameItem={b}
       isSelectedRevision={b.revision != null && selectedRevision != null && b.revision.id === selectedRevision.id}
