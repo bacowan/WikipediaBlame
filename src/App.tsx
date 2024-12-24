@@ -25,11 +25,10 @@ function App() {
       // TODO: Error handling
     }
     else {
-      setDiffProgress({completed: 0, total: revisions.value.length - 1, state: "determinate"})
-      const blames = await getBlameItems(revisions.value, (completed, total) => {
+      await getBlameItems(revisions.value, (completed, total, blames) => {
         setDiffProgress({completed, total, state: "determinate"});
+        setArticleSource(blames);
       });
-      setArticleSource(blames);
     }
   }
 
@@ -68,25 +67,22 @@ function App() {
 
 async function getBlameItems(
     revisions: Revision[],
-    updateProgress?: (completed: number, total: number) => void)
-    : Promise<BlameItem[]> {
+    postUpdate: (completed: number, total: number, blameItems: BlameItem[]) => void)
+    : Promise<void> {
   const latestRev = revisions[0];
   let blameItems: BlameItem[] = [{
     text: revisions[0].content,
     revision: revisions[0],
     type: "unchanged"
-  }]
+  }];
+  postUpdate(0, revisions.length - 1, blameItems);
 
   for (let i = 1; i < revisions.length; i++) {
     const olderRev = revisions[i];
     const newerRev = revisions[i - 1];
     blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev);
-    if (updateProgress) {
-      updateProgress(i, revisions.length - 1);
-    }
+    postUpdate(i, revisions.length - 1, blameItems);
   }
-
-  return blameItems;
 }
 
 interface ArrayCharIndex {
