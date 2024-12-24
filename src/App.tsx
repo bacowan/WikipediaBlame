@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
 import './App.css'
 import { Err, Ok, Result } from './Result';
-import * as Diff from 'diff';
 import BlameItem from './BlameItem';
 import DiffElement from './DiffElement';
 import Revision from './Revision';
 import RevisionDetails from './RevisionDetails';
+import { diffCharsAsync } from './DiffUtils';
+import ProgressBarOverlay, { Progress } from './ProgressBarOverlay';
 
 function App() {
 
@@ -13,15 +14,19 @@ function App() {
   const [articleSource, setArticleSource] = useState<BlameItem[]>([]);
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
+  const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
 
   async function Blame(name: string) {
+    setDiffProgress({state: "indeterminate"})
     const revisions = await getRevisionsForArticle(name);
 
     if (!revisions.ok) {
       // TODO: Error handling
     }
     else {
-      const blames = getBlameItems(revisions.value);
+      const blames = await getBlameItems(revisions.value, (completed, total) => {
+        setDiffProgress({completed, total, state: "determinate"});
+      });
       setArticleSource(blames);
     }
   }
@@ -38,6 +43,7 @@ function App() {
 
   return (
     <>
+      { diffProgress !== null && <ProgressBarOverlay progress={diffProgress}/> }
       <h1>Wikipedia Blame</h1>
       <div className='search-area'>
         <label>
@@ -61,7 +67,10 @@ function App() {
   )
 }
 
-function getBlameItems(revisions: Revision[]): BlameItem[] {
+async function getBlameItems(
+    revisions: Revision[],
+    updateProgress?: (completed: number, total: number) => void)
+    : Promise<BlameItem[]> {
   const latestRev = revisions[0];
   let blameItems: BlameItem[] = [{
     text: revisions[0].content,
@@ -72,29 +81,23 @@ function getBlameItems(revisions: Revision[]): BlameItem[] {
   for (let i = 1; i < revisions.length; i++) {
     const olderRev = revisions[i];
     const newerRev = revisions[i - 1];
-    blameItems = getBlameItem(blameItems, olderRev, newerRev, latestRev);
+    blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev);
+    if (updateProgress) {
+      updateProgress(i, revisions.length - 1);
+    }
   }
 
   return blameItems;
 }
-
-/*function getLatestBlameItems(oldRev: Revision, newRev: Revision): BlameItem[] {
-  const diff = Diff.diffChars(oldRev.content, newRev.content);
-  return diff.map(d => ({
-    text: d.value,
-    type: d.added ? "add" : d.removed ? "remove" : "unchanged",
-    revision: d.added || d.removed ? newRev : null
-  }));
-}*/
 
 interface ArrayCharIndex {
   itemIndex: number,
   charIndex: number
 }
 
-function getBlameItem(blameItems: BlameItem[], olderRev: Revision, newerRev: Revision, latestRev: Revision): BlameItem[] {
+async function getBlameItem(blameItems: BlameItem[], olderRev: Revision, newerRev: Revision, latestRev: Revision): Promise<BlameItem[]> {
   let newBlameItems: BlameItem[] = [];
-  const diff: BlameItem[] = Diff.diffChars(olderRev.content, latestRev.content) // TODO: call with callback for async
+  const diff: BlameItem[] = (await diffCharsAsync(olderRev.content, latestRev.content))
                     .map(d => ({
                       text: d.value,
                       type: d.added ? "add" : d.removed ? "remove" : "unchanged",
