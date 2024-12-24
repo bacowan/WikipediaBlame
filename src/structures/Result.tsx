@@ -4,6 +4,9 @@ export type Result<T, E> = Ok<T> | Err<E>;
 export function Ok<T>(value: T): Ok<T> {
     return { ok: true, value };
 }
+export function BlankOk(): Ok<void> {
+    return Ok<undefined>(undefined);
+}
 export function Err<T>(error: T): Err<T> {
     return { ok: false, error };
 }

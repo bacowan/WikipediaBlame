@@ -8,6 +8,7 @@ import SearchSection from './components/SearchSection';
 import SearchProgressBar, { Progress } from './components/SearchProgressBar';
 import { getBlameItems } from './utils/Blame';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
+import useCancellationToken from './utils/UseAbortController';
 
 interface ArticleSource {
   blameItems: BlameItem[],
@@ -22,24 +23,34 @@ function App() {
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
   const [latestRev, setLatestRev] = useState<Revision | null>(null);
+  const [abortSignal, isCancelled, cancel, resetAbort] = useCancellationToken();
+
+  function reset() {
+    resetAbort();
+    setDiffProgress(null);
+  }
 
   async function Blame(name: string) {
     setDiffProgress({state: "indeterminate"})
-    const revisions = await getRevisionsForArticle(name, articleSource.oldestComparedRevId);
+    const revisions = await getRevisionsForArticle(name, articleSource.oldestComparedRevId, abortSignal);
 
-    if (!revisions.ok) {
-      // TODO: Error handling
+    if (!abortSignal.aborted) {
+      if (!revisions.ok) {
+        // TODO: Error handling
+      }
+      else {
+        setLatestRev((r) => r === null ? revisions.value[0] : r);
+        await getBlameItems(latestRev, revisions.value, (completed, total, blames, oldestComparedRevId) => {
+          setDiffProgress({completed, total, state: "determinate"});
+          setArticleSource({
+            blameItems: blames,
+            oldestComparedRevId
+          });
+        }, abortSignal);
+      }
     }
-    else {
-      setLatestRev((r) => r === null ? revisions.value[0] : r);
-      await getBlameItems(latestRev, revisions.value, (completed, total, blames, oldestComparedRevId) => {
-        setDiffProgress({completed, total, state: "determinate"});
-        setArticleSource({
-          blameItems: blames,
-          oldestComparedRevId
-        });
-      });
-    }
+
+    reset();
   }
 
   const formattedBlames = useMemo(() => {
@@ -58,7 +69,9 @@ function App() {
       <div className='search-area'>
         {diffProgress === null ?
           <SearchSection articleName={articleName} setArticleName={setArticleName} onSearch={Blame}/> :
-          <SearchProgressBar articleName={articleName} progress={diffProgress}/>
+          isCancelled ?
+            <label>Cancelling... <progress/></label> :
+            <SearchProgressBar articleName={articleName} progress={diffProgress} onCancel={cancel}/>
         }
       </div>
       <div className='rev-area'>

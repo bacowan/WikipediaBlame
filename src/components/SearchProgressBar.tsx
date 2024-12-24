@@ -14,10 +14,11 @@ export type Progress = IndeterminateProgress | DeterminateProgress;
 
 interface SearchProgressBarParams {
     articleName: string,
-    progress: Progress
+    progress: Progress,
+    onCancel: () => void
 }
 
-function SearchProgressBar({articleName, progress}: SearchProgressBarParams) {
+function SearchProgressBar({articleName, progress, onCancel}: SearchProgressBarParams) {
     let progressBar: JSX.Element;
     let labelText = `Diffing ${articleName}`;
     if (progress.state === "determinate") {
@@ -29,7 +30,7 @@ function SearchProgressBar({articleName, progress}: SearchProgressBarParams) {
     }
     return <>
         <label>{labelText} {progressBar}</label>
-        <button className='cancel-button'>Cancel</button>
+        <button className='cancel-button' onClick={onCancel}>Cancel</button>
     </>
 }
 

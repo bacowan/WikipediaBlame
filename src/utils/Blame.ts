@@ -1,12 +1,13 @@
 import BlameItem from "../structures/BlameItem";
+import { BlankOk, Err, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
 import { diffCharsAsync } from "./DiffUtils";
 
 export async function getBlameItems(
     latestRev: Revision | null,
     revisions: Revision[],
-    postUpdate: (completed: number, total: number, blameItems: BlameItem[], comparedRevId: number) => void)
-    : Promise<void> {
+    postUpdate: (completed: number, total: number, blameItems: BlameItem[], comparedRevId: number) => void,
+    abortSignal: AbortSignal) : Promise<Result<void, string>> {
   if (latestRev === null) {
     latestRev = revisions[0];
   }
@@ -22,7 +23,12 @@ export async function getBlameItems(
     const newerRev = revisions[i - 1];
     blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev);
     postUpdate(i, revisions.length - 1, blameItems, revisions[i].id);
+    if (abortSignal.aborted) {
+      return Err<string>("aborted");
+    }
   }
+
+  return BlankOk();
 }
 
 interface ArrayCharIndex {
@@ -30,7 +36,11 @@ interface ArrayCharIndex {
   charIndex: number
 }
 
-async function getBlameItem(blameItems: BlameItem[], olderRev: Revision, newerRev: Revision, latestRev: Revision): Promise<BlameItem[]> {
+async function getBlameItem(
+    blameItems: BlameItem[],
+    olderRev: Revision,
+    newerRev: Revision,
+    latestRev: Revision): Promise<BlameItem[]> {
   let newBlameItems: BlameItem[] = [];
   const diff: BlameItem[] = (await diffCharsAsync(olderRev.content, latestRev.content))
                     .map(d => ({
