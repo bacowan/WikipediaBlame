@@ -6,7 +6,8 @@ import DiffElement from './DiffElement';
 import Revision from './Revision';
 import RevisionDetails from './RevisionDetails';
 import { diffCharsAsync } from './DiffUtils';
-import ProgressBarOverlay, { Progress } from './ProgressBarOverlay';
+import SearchSection from './SearchSection';
+import SearchProgressBar, { Progress } from './SearchProgressBar';
 
 function App() {
 
@@ -24,6 +25,7 @@ function App() {
       // TODO: Error handling
     }
     else {
+      setDiffProgress({completed: 0, total: revisions.value.length - 1, state: "determinate"})
       const blames = await getBlameItems(revisions.value, (completed, total) => {
         setDiffProgress({completed, total, state: "determinate"});
       });
@@ -43,15 +45,12 @@ function App() {
 
   return (
     <>
-      { diffProgress !== null && <ProgressBarOverlay progress={diffProgress}/> }
       <h1>Wikipedia Blame</h1>
       <div className='search-area'>
-        <label>
-          Article Name: <input value={articleName} onChange={(e) => setArticleName(e.target.value)}/>
-        </label>
-        <button className='blame-button' onClick={() => Blame(articleName)}>
-          Blame
-        </button>
+        {diffProgress === null ?
+          <SearchSection articleName={articleName} setArticleName={setArticleName} onSearch={Blame}/> :
+          <SearchProgressBar articleName={articleName} progress={diffProgress}/>
+        }
       </div>
       <div className='rev-area'>
         <div className='main-left'>
