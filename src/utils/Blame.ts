@@ -6,23 +6,31 @@ import { diffCharsAsync } from "./DiffUtils";
 export async function getBlameItems(
     latestRev: Revision | null,
     revisions: Revision[],
-    postUpdate: (completed: number, total: number, blameItems: BlameItem[], comparedRevId: number) => void,
+    blameItems: BlameItem[],
+    postUpdate: (completed: number, total: number, blameItems: BlameItem[], revsCompared: number, comparedRevId: number) => void,
     abortSignal: AbortSignal) : Promise<Result<void, string>> {
+
   if (latestRev === null) {
     latestRev = revisions[0];
   }
-  let blameItems: BlameItem[] = [{
-    text: revisions[0].content,
-    revision: revisions[0],
-    type: "unchanged"
-  }];
-  postUpdate(0, revisions.length - 1, blameItems, revisions[0].id);
+  if (blameItems.length === 0) {
+    blameItems = [{
+      text: revisions[0].content,
+      revision: revisions[0],
+      type: "unchanged"
+    }];
+  }
+  else {
+    blameItems = blameItems;
+  }
+
+  postUpdate(0, revisions.length - 1, blameItems, 1, revisions[0].id);
 
   for (let i = 1; i < revisions.length; i++) {
     const olderRev = revisions[i];
     const newerRev = revisions[i - 1];
     blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev);
-    postUpdate(i, revisions.length - 1, blameItems, revisions[i].id);
+    postUpdate(i, revisions.length - 1, blameItems, i + 1, revisions[i].id);
     if (abortSignal.aborted) {
       return Err<string>("aborted");
     }

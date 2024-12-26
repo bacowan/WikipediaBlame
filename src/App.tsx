@@ -13,12 +13,13 @@ import useCancellationToken from './utils/UseAbortController';
 interface ArticleSource {
   blameItems: BlameItem[],
   oldestComparedRevId: number | null
+  revsCompared: number
 }
 
 function App() {
 
   const [articleName, setArticleName] = useState("");
-  const [articleSource, setArticleSource] = useState<ArticleSource>({blameItems: [], oldestComparedRevId: null});
+  const [articleSource, setArticleSource] = useState<ArticleSource>({blameItems: [], revsCompared: 0, oldestComparedRevId: null});
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
@@ -40,11 +41,12 @@ function App() {
       }
       else {
         setLatestRev((r) => r === null ? revisions.value[0] : r);
-        await getBlameItems(latestRev, revisions.value, (completed, total, blames, oldestComparedRevId) => {
+        await getBlameItems(latestRev, revisions.value, articleSource.blameItems, (completed, total, blames, revsCompared, oldestComparedRevId) => {
           setDiffProgress({completed, total, state: "determinate"});
           setArticleSource({
             blameItems: blames,
-            oldestComparedRevId
+            oldestComparedRevId,
+            revsCompared
           });
         }, abortSignal);
       }
@@ -68,7 +70,7 @@ function App() {
       <h1>Wikipedia Blame</h1>
       <div className='search-area'>
         {diffProgress === null ?
-          <SearchSection articleName={articleName} setArticleName={setArticleName} onSearch={Blame}/> :
+          <SearchSection articleName={articleName} setArticleName={setArticleName} onSearch={Blame} revsCompared={articleSource.revsCompared}/> :
           isCancelled ?
             <label>Cancelling... <progress/></label> :
             <SearchProgressBar articleName={articleName} progress={diffProgress} onCancel={cancel}/>
