@@ -1,0 +1,17 @@
+.options-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0.5em;
+}
+
+.options-section > * {
+    margin: 0 1em;
+}
+
+@media (min-width: 600px) {
+    .options-section {
+      flex-direction: row;
+    }
+  }

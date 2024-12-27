@@ -9,6 +9,8 @@ import SearchProgressBar, { Progress } from './components/SearchProgressBar';
 import { getBlameItems } from './utils/Blame';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
 import useCancellationToken from './utils/UseAbortController';
+import TooltipText from './components/TooltipText';
+import HelpPage from './components/HelpPage';
 
 interface ArticleSource {
   blameItems: BlameItem[],
@@ -25,6 +27,17 @@ function App() {
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
   const [latestRev, setLatestRev] = useState<Revision | null>(null);
   const [abortSignal, isCancelled, cancel, resetAbort] = useCancellationToken();
+  const [isHelpShown, setIsHelpShown] = useState(false);
+
+  const formattedBlames = useMemo(() => {
+    return articleSource.blameItems.map((b, i) => <DiffElement
+      key={i}
+      blameItem={b}
+      isSelectedRevision={b.revision != null && selectedRevision != null && b.revision.id === selectedRevision.id}
+      isHoveredRevision={b.revision != null && hoveredRevision != null && b.revision.id === hoveredRevision.id}
+      setSelectedRevision={setSelectedRevision}
+      setHoveredRevision={setHoveredRevision}/>)
+  }, [articleSource, selectedRevision, hoveredRevision]);
 
   function reset() {
     resetAbort();
@@ -55,27 +68,19 @@ function App() {
     reset();
   }
 
-  const formattedBlames = useMemo(() => {
-    return articleSource.blameItems.map((b, i) => <DiffElement
-      key={i}
-      blameItem={b}
-      isSelectedRevision={b.revision != null && selectedRevision != null && b.revision.id === selectedRevision.id}
-      isHoveredRevision={b.revision != null && hoveredRevision != null && b.revision.id === hoveredRevision.id}
-      setSelectedRevision={setSelectedRevision}
-      setHoveredRevision={setHoveredRevision}/>)
-  }, [articleSource, selectedRevision, hoveredRevision]);
+  function showHelp() {
+    setIsHelpShown(true);
+  }
 
   return (
     <>
-      <h1>Wikipedia Blame</h1>
-      <div className='search-area'>
-        {diffProgress === null ?
-          <SearchSection articleName={articleName} setArticleName={setArticleName} onSearch={Blame} revsCompared={articleSource.revsCompared}/> :
-          isCancelled ?
-            <label>Cancelling... <progress/></label> :
-            <SearchProgressBar articleName={articleName} progress={diffProgress} onCancel={cancel}/>
-        }
-      </div>
+      <h1>Wikipedia Blame <span className='help-icon' onClick={showHelp}>ℹ️</span></h1>
+      {diffProgress === null ?
+        <SearchSection articleName={articleName} setArticleName={setArticleName} onSearch={Blame} revsCompared={articleSource.revsCompared}/> :
+        isCancelled ?
+          <label>Cancelling... <progress/></label> :
+          <SearchProgressBar articleName={articleName} progress={diffProgress} onCancel={cancel}/>
+      }
       <div className='rev-area'>
         <div className='main-left'>
           <p className='diff-text'>
@@ -86,6 +91,7 @@ function App() {
           <RevisionDetails selectedRevision={selectedRevision}/>
         </div>
       </div>
+      { isHelpShown && <HelpPage close={() => setIsHelpShown(false)}/> }
     </>
   )
 }

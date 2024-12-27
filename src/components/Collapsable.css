@@ -1,0 +1,8 @@
+.collapsable {
+    margin-top: 0.5em;
+}
+
+.collapsable-header {
+    cursor: pointer;
+    user-select: none;
+}

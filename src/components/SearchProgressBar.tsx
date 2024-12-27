@@ -28,10 +28,10 @@ function SearchProgressBar({articleName, progress, onCancel}: SearchProgressBarP
     else {
         progressBar = <progress/>
     }
-    return <>
+    return <div className="search-progress-bar-area">
         <label>{labelText} {progressBar}</label>
         <button className='cancel-button' onClick={onCancel}>Cancel</button>
-    </>
+    </div>
 }
 
 export default SearchProgressBar;

@@ -1,3 +1,19 @@
 .blame-button {
     margin-left: 1em;
-  }
+}
+
+.search-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
+.search-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.options-collapsable {
+  width: 100%;
+}

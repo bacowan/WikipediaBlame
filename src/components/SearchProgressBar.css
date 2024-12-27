@@ -1,3 +1,10 @@
 .cancel-button {
     margin-left: 1em;
 }
+
+.search-progress-bar-area {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}

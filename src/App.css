@@ -11,13 +11,6 @@ textarea {
   resize: none;
 }
 
-.search-area {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-}
-
 .rev-area {
   padding: 0.5em;
   display: flex;
@@ -47,6 +40,10 @@ textarea {
   border-color: #575757;
   border-radius: 0.5em;
   word-wrap: break-word;
+}
+
+.help-icon {
+  cursor: pointer;
 }
 
 @media (min-width: 600px) {
