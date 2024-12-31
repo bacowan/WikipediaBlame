@@ -11,8 +11,7 @@
 }
 
 .modal > div {
-    width: 90%;
-    margin: 15% auto;
+    margin: 15% 1em;
     background-color: #242424;
     border-color: black;
     border-radius: 1em;

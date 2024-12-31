@@ -9,8 +9,8 @@ import SearchProgressBar, { Progress } from './components/SearchProgressBar';
 import { getBlameItems } from './utils/Blame';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
 import useCancellationToken from './utils/UseAbortController';
-import TooltipText from './components/TooltipText';
 import HelpPage from './components/HelpPage';
+import Constants from './constants';
 
 interface ArticleSource {
   blameItems: BlameItem[],
@@ -28,6 +28,8 @@ function App() {
   const [latestRev, setLatestRev] = useState<Revision | null>(null);
   const [abortSignal, isCancelled, cancel, resetAbort] = useCancellationToken();
   const [isHelpShown, setIsHelpShown] = useState(false);
+  const [isAsync, setIsAsync] = useState(true);
+  const [revsAtATime, setRevsAtATime] = useState(Constants.maxRevsAtATime);
 
   const formattedBlames = useMemo(() => {
     return articleSource.blameItems.map((b, i) => <DiffElement
@@ -46,7 +48,7 @@ function App() {
 
   async function Blame(name: string) {
     setDiffProgress({state: "indeterminate"})
-    const revisions = await getRevisionsForArticle(name, articleSource.oldestComparedRevId, abortSignal);
+    const revisions = await getRevisionsForArticle(name, articleSource.oldestComparedRevId, { isAsync, revsAtATime }, abortSignal);
 
     if (!abortSignal.aborted) {
       if (!revisions.ok) {
@@ -61,7 +63,7 @@ function App() {
             oldestComparedRevId,
             revsCompared
           });
-        }, abortSignal);
+        }, isAsync, abortSignal);
       }
     }
 
@@ -76,7 +78,15 @@ function App() {
     <>
       <h1>Wikipedia Blame <span className='help-icon' onClick={showHelp}>ℹ️</span></h1>
       {diffProgress === null ?
-        <SearchSection articleName={articleName} setArticleName={setArticleName} onSearch={Blame} revsCompared={articleSource.revsCompared}/> :
+        <SearchSection
+          articleName={articleName}
+          setArticleName={setArticleName}
+          onSearch={Blame}
+          revsCompared={articleSource.revsCompared}
+          isAsync={isAsync}
+          revsAtATime={revsAtATime}
+          setIsAsync={setIsAsync}
+          setRevsAtATime={setRevsAtATime}/> :
         isCancelled ?
           <label>Cancelling... <progress/></label> :
           <SearchProgressBar articleName={articleName} progress={diffProgress} onCancel={cancel}/>

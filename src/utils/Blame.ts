@@ -1,13 +1,14 @@
 import BlameItem from "../structures/BlameItem";
 import { BlankOk, Err, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
-import { diffCharsAsync } from "./DiffUtils";
+import { diffChars, diffCharsAsync } from "./DiffUtils";
 
 export async function getBlameItems(
     latestRev: Revision | null,
     revisions: Revision[],
     blameItems: BlameItem[],
     postUpdate: (completed: number, total: number, blameItems: BlameItem[], revsCompared: number, comparedRevId: number) => void,
+    isAsync: boolean,
     abortSignal: AbortSignal) : Promise<Result<void, string>> {
 
   if (latestRev === null) {
@@ -29,7 +30,7 @@ export async function getBlameItems(
   for (let i = 1; i < revisions.length; i++) {
     const olderRev = revisions[i];
     const newerRev = revisions[i - 1];
-    blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev);
+    blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev, isAsync);
     postUpdate(i, revisions.length - 1, blameItems, i + 1, revisions[i].id);
     if (abortSignal.aborted) {
       return Err<string>("aborted");
@@ -48,10 +49,15 @@ async function getBlameItem(
     blameItems: BlameItem[],
     olderRev: Revision,
     newerRev: Revision,
-    latestRev: Revision): Promise<BlameItem[]> {
+    latestRev: Revision,
+    isAsync: boolean): Promise<BlameItem[]> {
   let newBlameItems: BlameItem[] = [];
-  const diff: BlameItem[] = (await diffCharsAsync(olderRev.content, latestRev.content))
-                    .map(d => ({
+
+  const rawDiff = isAsync ?
+    await diffCharsAsync(olderRev.content, latestRev.content) :
+    diffChars(olderRev.content, latestRev.content);
+
+  const diff: BlameItem[] = rawDiff.map(d => ({
                       text: d.value,
                       type: d.added ? "add" : d.removed ? "remove" : "unchanged",
                       revision: null

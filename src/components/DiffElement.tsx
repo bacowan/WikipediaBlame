@@ -1,6 +1,6 @@
-import BlameItem from "./BlameItem";
+import BlameItem from "../structures/BlameItem";
+import Revision from "../structures/Revision";
 import "./DiffElement.css";
-import Revision from "./Revision";
 
 interface DiffElementProps {
     blameItem: BlameItem,

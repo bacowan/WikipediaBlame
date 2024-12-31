@@ -1,15 +1,22 @@
 
+import Constants from "../constants";
 import { Err, Ok, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
+
+export interface Options {
+  isAsync: boolean,
+  revsAtATime: number
+}
 
 export async function getRevisionsForArticle(
       articleName: string,
       fromRevId: number | null,
+      options: Options,
       abortSignal: AbortSignal) : Promise<Result<Revision[], string>> {
 
     articleName = articleName.trim();
   
-    let url = "https://en.wikipedia.org/w/api.php?action=query&titles=" + encodeURI(articleName) + "&prop=revisions&rvprop=ids|content|timestamp|user|comment&rvlimit=50&format=json&origin=*";
+    let url = `${Constants.apiEndpoint}?action=query&titles=${encodeURI(articleName)}&prop=revisions&rvprop=ids|content|timestamp|user|comment&rvlimit=${options.revsAtATime}&format=json&origin=*`;
     if (fromRevId !== null) {
         url += "&rvstartid=" + fromRevId;
     }
