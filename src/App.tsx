@@ -11,6 +11,7 @@ import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
 import useCancellationToken from './utils/UseAbortController';
 import HelpPage from './components/HelpPage';
 import Constants from './constants';
+import { Clip } from './utils/NumberUtils';
 
 interface ArticleSource {
   blameItems: BlameItem[],
@@ -28,7 +29,7 @@ function App() {
   const [latestRev, setLatestRev] = useState<Revision | null>(null);
   const [abortSignal, isCancelled, cancel, resetAbort] = useCancellationToken();
   const [isHelpShown, setIsHelpShown] = useState(false);
-  const [isAsync, setIsAsync] = useState(true);
+  const [isAsync, setIsAsync] = useState(false);
   const [revsAtATime, setRevsAtATime] = useState(Constants.maxRevsAtATime);
 
   const formattedBlames = useMemo(() => {
@@ -48,7 +49,12 @@ function App() {
 
   async function Blame(name: string) {
     setDiffProgress({state: "indeterminate"})
-    const revisions = await getRevisionsForArticle(name, articleSource.oldestComparedRevId, { isAsync, revsAtATime }, abortSignal);
+    const revisions = await getRevisionsForArticle(
+      name,
+      articleSource.oldestComparedRevId,
+      { isAsync, revsAtATime: Clip(revsAtATime, Constants.minRevsAtATime, Constants.maxRevsAtATime) },
+      abortSignal
+    );
 
     if (!abortSignal.aborted) {
       if (!revisions.ok) {
