@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import './App.css'
 import BlameItem from './structures/BlameItem';
 import DiffElement from './components/DiffElement';
@@ -8,7 +8,6 @@ import SearchSection from './components/SearchSection';
 import SearchProgressBar, { Progress } from './components/SearchProgressBar';
 import { getBlameItems } from './utils/Blame';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
-import useCancellationToken from './utils/UseAbortController';
 import HelpPage from './components/HelpPage';
 import Constants from './constants';
 import { Clip } from './utils/NumberUtils';
@@ -27,10 +26,22 @@ function App() {
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
   const [latestRev, setLatestRev] = useState<Revision | null>(null);
-  const [abortSignal, isCancelled, cancel, resetAbort] = useCancellationToken();
   const [isHelpShown, setIsHelpShown] = useState(false);
   const [isAsync, setIsAsync] = useState(false);
   const [revsAtATime, setRevsAtATime] = useState(Constants.maxRevsAtATime);
+
+  const abortController = useRef<AbortController>();
+
+  if (abortController.current === null) {
+    abortController.current = new AbortController();
+  }
+
+  function cancel() {
+    if (abortController.current !== null) {
+      abortController.current?.abort();
+      setDiffProgress(null);
+    }
+  }
 
   const formattedBlames = useMemo(() => {
     return articleSource.blameItems.map((b, i) => <DiffElement
@@ -42,38 +53,41 @@ function App() {
       setHoveredRevision={setHoveredRevision}/>)
   }, [articleSource, selectedRevision, hoveredRevision]);
 
-  function reset() {
-    resetAbort();
-    setDiffProgress(null);
-  }
-
   async function Blame(name: string) {
-    setDiffProgress({state: "indeterminate"})
-    const revisions = await getRevisionsForArticle(
-      name,
-      articleSource.oldestComparedRevId,
-      { isAsync, revsAtATime: Clip(revsAtATime, Constants.minRevsAtATime, Constants.maxRevsAtATime) },
-      abortSignal
-    );
+    if (abortController.current !== null) {
+      abortController.current?.abort();
+      abortController.current = new AbortController();
 
-    if (!abortSignal.aborted) {
-      if (!revisions.ok) {
-        // TODO: Error handling
+      setDiffProgress({state: 'indeterminate'});
+
+      try {
+        const revisions = await getRevisionsForArticle(
+          name,
+          articleSource.oldestComparedRevId,
+          { isAsync, revsAtATime: Clip(revsAtATime, Constants.minRevsAtATime, Constants.maxRevsAtATime) },
+          abortController.current.signal
+        );
+
+        if (!revisions.ok) {
+          // TODO: Error handling
+        }
+        else {
+          setLatestRev((r) => r === null ? revisions.value[0] : r);
+          await getBlameItems(latestRev, revisions.value, articleSource.blameItems, (completed, total, blames, revsCompared, oldestComparedRevId) => {
+            setDiffProgress({completed, total, state: "determinate"});
+            setArticleSource({
+              blameItems: blames,
+              oldestComparedRevId,
+              revsCompared
+            });
+          }, isAsync, abortController.current.signal);
+          setDiffProgress(null);
+        }
       }
-      else {
-        setLatestRev((r) => r === null ? revisions.value[0] : r);
-        await getBlameItems(latestRev, revisions.value, articleSource.blameItems, (completed, total, blames, revsCompared, oldestComparedRevId) => {
-          setDiffProgress({completed, total, state: "determinate"});
-          setArticleSource({
-            blameItems: blames,
-            oldestComparedRevId,
-            revsCompared
-          });
-        }, isAsync, abortSignal);
+      catch (e) {
+        // TODO
       }
     }
-
-    reset();
   }
 
   function showHelp() {
@@ -93,8 +107,6 @@ function App() {
           revsAtATime={revsAtATime}
           setIsAsync={setIsAsync}
           setRevsAtATime={setRevsAtATime}/> :
-        isCancelled ?
-          <label>Cancelling... <progress/></label> :
           <SearchProgressBar articleName={articleName} progress={diffProgress} onCancel={cancel}/>
       }
       <div className='rev-area'>
