@@ -86,6 +86,7 @@ function App() {
       }
       catch (e) {
         // TODO
+        alert(e);
       }
     }
   }

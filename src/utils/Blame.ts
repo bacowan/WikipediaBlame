@@ -1,7 +1,7 @@
 import BlameItem from "../structures/BlameItem";
 import { BlankOk, Err, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
-import { diffChars, diffCharsAsync } from "./DiffUtils";
+import { diffCharsAsync, diffCharsWebworkersAsync } from "./DiffUtils";
 
 export async function getBlameItems(
     latestRev: Revision | null,
@@ -27,14 +27,18 @@ export async function getBlameItems(
 
   postUpdate(0, revisions.length - 1, blameItems, 1, revisions[0].id);
 
-  for (let i = 1; i < revisions.length; i++) {
-    const olderRev = revisions[i];
-    const newerRev = revisions[i - 1];
-    blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev, isAsync);
-    postUpdate(i, revisions.length - 1, blameItems, i + 1, revisions[i].id);
-    if (abortSignal.aborted) {
-      return Err<string>("aborted");
+  try {
+    for (let i = 1; i < revisions.length; i++) {
+      const olderRev = revisions[i];
+      const newerRev = revisions[i - 1];
+      blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev, isAsync);
+      postUpdate(i, revisions.length - 1, blameItems, i + 1, revisions[i].id);
+      if (abortSignal.aborted) {
+        return Err<string>("aborted");
+      }
     }
+  } catch (e) {
+    return Err<string>("Error while diffing");
   }
 
   return BlankOk();
@@ -55,7 +59,7 @@ async function getBlameItem(
 
   const rawDiff = isAsync ?
     await diffCharsAsync(olderRev.content, latestRev.content) :
-    diffChars(olderRev.content, latestRev.content);
+    await diffCharsWebworkersAsync(olderRev.content, latestRev.content);
 
   const diff: BlameItem[] = rawDiff.map(d => ({
                       text: d.value,
