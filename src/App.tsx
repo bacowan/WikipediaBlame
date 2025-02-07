@@ -1,19 +1,19 @@
 import { useState, useMemo, useRef } from 'react'
 import './App.css'
-import BlameItem from './structures/BlameItem';
+import RevisionDiff from './structures/RevisionDiff';
 import DiffElement from './components/DiffElement';
 import Revision from './structures/Revision';
 import RevisionDetails from './components/RevisionDetails';
 import SearchSection from './components/SearchSection';
 import SearchProgressBar, { Progress } from './components/SearchProgressBar';
-import { getBlameItems } from './utils/Blame';
+import { getRevisionDiffs } from './utils/Blame';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
 import HelpPage from './components/HelpPage';
 import Constants from './constants';
 import { Clip } from './utils/NumberUtils';
 
 interface ArticleSource {
-  blameItems: BlameItem[],
+  revisionDiffs: RevisionDiff[],
   oldestComparedRevId: number | null
   revsCompared: number
 }
@@ -21,7 +21,7 @@ interface ArticleSource {
 function App() {
 
   const [articleName, setArticleName] = useState("");
-  const [articleSource, setArticleSource] = useState<ArticleSource>({blameItems: [], revsCompared: 0, oldestComparedRevId: null});
+  const [articleSource, setArticleSource] = useState<ArticleSource>({revisionDiffs: [], revsCompared: 0, oldestComparedRevId: null});
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
@@ -44,7 +44,7 @@ function App() {
   }
 
   const formattedBlames = useMemo(() => {
-    return articleSource.blameItems.map((b, i) => <DiffElement
+    return articleSource.revisionDiffs.map((b, i) => <DiffElement
       key={i}
       blameItem={b}
       isSelectedRevision={b.revision != null && selectedRevision != null && b.revision.id === selectedRevision.id}
@@ -73,10 +73,10 @@ function App() {
         }
         else {
           setLatestRev((r) => r === null ? revisions.value[0] : r);
-          await getBlameItems(latestRev, revisions.value, articleSource.blameItems, (completed, total, blames, revsCompared, oldestComparedRevId) => {
+          await getRevisionDiffs(latestRev, revisions.value, articleSource.revisionDiffs, (completed, total, revisionDiffs, revsCompared, oldestComparedRevId) => {
             setDiffProgress({completed, total, state: "determinate"});
             setArticleSource({
-              blameItems: blames,
+              revisionDiffs: revisionDiffs,
               oldestComparedRevId,
               revsCompared
             });

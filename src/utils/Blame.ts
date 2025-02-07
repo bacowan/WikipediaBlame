@@ -1,38 +1,38 @@
-import BlameItem from "../structures/BlameItem";
+import RevisionDiff from "../structures/RevisionDiff";
 import { BlankOk, Err, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
 import { diffCharsAsync, diffCharsWebworkersAsync } from "./DiffUtils";
 
-export async function getBlameItems(
+export async function getRevisionDiffs(
     latestRev: Revision | null,
-    revisions: Revision[],
-    blameItems: BlameItem[],
-    postUpdate: (completed: number, total: number, blameItems: BlameItem[], revsCompared: number, comparedRevId: number) => void,
+    revsToDiff: Revision[],
+    previousRevisionDiffs: RevisionDiff[],
+    postUpdate: (completed: number, total: number, revisionDiffs: RevisionDiff[], revsCompared: number, comparedRevId: number) => void,
     isAsync: boolean,
     abortSignal: AbortSignal) : Promise<Result<void, string>> {
 
   if (latestRev === null) {
-    latestRev = revisions[0];
+    latestRev = revsToDiff[0];
   }
-  if (blameItems.length === 0) {
-    blameItems = [{
-      text: revisions[0].content,
-      revision: revisions[0],
+  if (previousRevisionDiffs.length === 0) {
+    previousRevisionDiffs = [{
+      text: revsToDiff[0].content,
+      revision: revsToDiff[0],
       type: "unchanged"
     }];
   }
   else {
-    blameItems = blameItems;
+    previousRevisionDiffs = previousRevisionDiffs;
   }
 
-  postUpdate(0, revisions.length - 1, blameItems, 1, revisions[0].id);
+  postUpdate(0, revsToDiff.length - 1, previousRevisionDiffs, 1, revsToDiff[0].id);
 
   try {
-    for (let i = 1; i < revisions.length; i++) {
-      const olderRev = revisions[i];
-      const newerRev = revisions[i - 1];
-      blameItems = await getBlameItem(blameItems, olderRev, newerRev, latestRev, isAsync);
-      postUpdate(i, revisions.length - 1, blameItems, i + 1, revisions[i].id);
+    for (let i = 1; i < revsToDiff.length; i++) {
+      const olderRev = revsToDiff[i];
+      const newerRev = revsToDiff[i - 1];
+      previousRevisionDiffs = await getRevisionDiff(previousRevisionDiffs, olderRev, newerRev, latestRev, isAsync);
+      postUpdate(i, revsToDiff.length - 1, previousRevisionDiffs, i + 1, revsToDiff[i].id);
       if (abortSignal.aborted) {
         return Err<string>("aborted");
       }
@@ -49,19 +49,19 @@ interface ArrayCharIndex {
   charIndex: number
 }
 
-async function getBlameItem(
-    blameItems: BlameItem[],
+async function getRevisionDiff(
+    previousRevisionDiffs: RevisionDiff[],
     olderRev: Revision,
     newerRev: Revision,
     latestRev: Revision,
-    isAsync: boolean): Promise<BlameItem[]> {
-  let newBlameItems: BlameItem[] = [];
+    isAsync: boolean): Promise<RevisionDiff[]> {
+  let newBlameItems: RevisionDiff[] = [];
 
   const rawDiff = isAsync ?
     await diffCharsAsync(olderRev.content, latestRev.content) :
     await diffCharsWebworkersAsync(olderRev.content, latestRev.content);
 
-  const diff: BlameItem[] = rawDiff.map(d => ({
+  const diff: RevisionDiff[] = rawDiff.map(d => ({
                       text: d.value,
                       type: d.added ? "add" : d.removed ? "remove" : "unchanged",
                       revision: null
@@ -70,8 +70,8 @@ async function getBlameItem(
   let blameIndex = { itemIndex: 0, charIndex: 0 }
   let diffIndex = { itemIndex: 0, charIndex: 0 }
   
-  while (blameIndex.itemIndex < blameItems.length) {
-    const blameItem = blameItems[blameIndex.itemIndex];
+  while (blameIndex.itemIndex < previousRevisionDiffs.length) {
+    const blameItem = previousRevisionDiffs[blameIndex.itemIndex];
     const diffItem = diff[diffIndex.itemIndex];
     if (blameItem.type === "unchanged") {
       if (diffItem.type === "remove") {
@@ -92,13 +92,13 @@ async function getBlameItem(
           type: diffItem.type,
           revision: diffItem.type === "add" ? newerRev : null
         });
-        blameIndex = advanceIndex(blameIndex, blameItems, textLength);
+        blameIndex = advanceIndex(blameIndex, previousRevisionDiffs, textLength);
         diffIndex = advanceIndex(diffIndex, diff, textLength);
       }
     }
     else {
       newBlameItems.push(blameItem);
-      blameIndex = advanceIndex(blameIndex, blameItems, blameItem.text.length);
+      blameIndex = advanceIndex(blameIndex, previousRevisionDiffs, blameItem.text.length);
       diffIndex = advanceIndex(diffIndex, diff, blameItem.text.length);
     }
   }
@@ -106,7 +106,7 @@ async function getBlameItem(
   return newBlameItems;
 }
 
-function advanceIndex(oldIndex: ArrayCharIndex, array: BlameItem[], count: number): ArrayCharIndex {
+function advanceIndex(oldIndex: ArrayCharIndex, array: RevisionDiff[], count: number): ArrayCharIndex {
   let itemIndex = oldIndex.itemIndex;
   let charIndex = oldIndex.charIndex;
 

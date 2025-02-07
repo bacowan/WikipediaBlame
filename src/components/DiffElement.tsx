@@ -1,9 +1,9 @@
-import BlameItem from "../structures/BlameItem";
+import RevisionDiff from "../structures/RevisionDiff";
 import Revision from "../structures/Revision";
 import "./DiffElement.css";
 
 interface DiffElementProps {
-    blameItem: BlameItem,
+    blameItem: RevisionDiff,
     isSelectedRevision: boolean,
     isHoveredRevision: boolean,
     setSelectedRevision: (revision: Revision | null) => void,

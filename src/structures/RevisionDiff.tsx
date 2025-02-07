@@ -1,8 +1,8 @@
 import Revision from "./Revision"
 
-interface BlameItem {
+interface RevisionDiff {
     text: string,
     type: "add" | "remove" | "change" | "unchanged"
     revision: Revision | null
 }
-export default BlameItem
+export default RevisionDiff
