@@ -6,7 +6,7 @@ import Revision from './structures/Revision';
 import RevisionDetails from './components/RevisionDetails';
 import SearchSection from './components/SearchSection';
 import SearchProgressBar, { Progress } from './components/SearchProgressBar';
-import { getRevisionDiffs } from './utils/Blame';
+import { getRevisionDiffs } from './utils/GetRevisionDiffs';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
 import HelpPage from './components/HelpPage';
 import Constants from './constants';
@@ -27,7 +27,7 @@ function App() {
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
   const [latestRev, setLatestRev] = useState<Revision | null>(null);
   const [isHelpShown, setIsHelpShown] = useState(false);
-  const [isAsync, setIsAsync] = useState(false);
+  const [isAsync, setIsAsync] = useState(true);
   const [revsAtATime, setRevsAtATime] = useState(Constants.maxRevsAtATime);
 
   const abortController = useRef<AbortController>();
@@ -73,14 +73,19 @@ function App() {
         }
         else {
           setLatestRev((r) => r === null ? revisions.value[0] : r);
-          await getRevisionDiffs(latestRev, revisions.value, articleSource.revisionDiffs, (completed, total, revisionDiffs, revsCompared, oldestComparedRevId) => {
-            setDiffProgress({completed, total, state: "determinate"});
-            setArticleSource({
-              revisionDiffs: revisionDiffs,
-              oldestComparedRevId,
-              revsCompared
+          const revisionDiffsGenerator = getRevisionDiffs(latestRev, revisions.value, articleSource.revisionDiffs, isAsync, abortController.current.signal);
+          for await (const diffProgress of revisionDiffsGenerator) {
+            setDiffProgress({
+              completed: diffProgress.completed,
+              total: diffProgress.total,
+              state: "determinate"
             });
-          }, isAsync, abortController.current.signal);
+            setArticleSource({
+              revisionDiffs: diffProgress.revisionDiffs,
+              oldestComparedRevId: diffProgress.comparedRevId,
+              revsCompared: diffProgress.revsCompared
+            });
+          }
           setDiffProgress(null);
         }
       }

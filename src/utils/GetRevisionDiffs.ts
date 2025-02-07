@@ -1,15 +1,23 @@
 import RevisionDiff from "../structures/RevisionDiff";
 import { BlankOk, Err, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
-import { diffCharsAsync, diffCharsWebworkersAsync } from "./DiffUtils";
+import { diffChars, diffCharsWebworkersAsync } from "./DiffUtils";
+import AbortedError from "../errors/AbortedError";
 
-export async function getRevisionDiffs(
+export interface RevisionDiffProgress {
+  completed: number,
+  total: number,
+  revisionDiffs: RevisionDiff[],
+  revsCompared: number,
+  comparedRevId: number
+}
+
+export async function* getRevisionDiffs(
     latestRev: Revision | null,
     revsToDiff: Revision[],
     previousRevisionDiffs: RevisionDiff[],
-    postUpdate: (completed: number, total: number, revisionDiffs: RevisionDiff[], revsCompared: number, comparedRevId: number) => void,
     isAsync: boolean,
-    abortSignal: AbortSignal) : Promise<Result<void, string>> {
+    abortSignal?: AbortSignal) : AsyncGenerator<RevisionDiffProgress, void, void> {
 
   if (latestRev === null) {
     latestRev = revsToDiff[0];
@@ -25,23 +33,29 @@ export async function getRevisionDiffs(
     previousRevisionDiffs = previousRevisionDiffs;
   }
 
-  postUpdate(0, revsToDiff.length - 1, previousRevisionDiffs, 1, revsToDiff[0].id);
+  yield {
+    completed: 0,
+    total: revsToDiff.length - 1,
+    revisionDiffs: previousRevisionDiffs,
+    revsCompared: 1,
+    comparedRevId: revsToDiff[0].id
+  };
 
-  try {
-    for (let i = 1; i < revsToDiff.length; i++) {
-      const olderRev = revsToDiff[i];
-      const newerRev = revsToDiff[i - 1];
-      previousRevisionDiffs = await getRevisionDiff(previousRevisionDiffs, olderRev, newerRev, latestRev, isAsync);
-      postUpdate(i, revsToDiff.length - 1, previousRevisionDiffs, i + 1, revsToDiff[i].id);
-      if (abortSignal.aborted) {
-        return Err<string>("aborted");
-      }
+  for (let i = 1; i < revsToDiff.length; i++) {
+    const olderRev = revsToDiff[i];
+    const newerRev = revsToDiff[i - 1];
+    previousRevisionDiffs = await getRevisionDiff(previousRevisionDiffs, olderRev, newerRev, latestRev, isAsync);
+    yield {
+      completed: i,
+      total: revsToDiff.length - 1,
+      revisionDiffs: previousRevisionDiffs,
+      revsCompared: i + 1,
+      comparedRevId: revsToDiff[i].id
     }
-  } catch (e) {
-    return Err<string>("Error while diffing");
+    if (abortSignal?.aborted) {
+      throw new AbortedError("Diff process was aborted");
+    }
   }
-
-  return BlankOk();
 }
 
 interface ArrayCharIndex {
@@ -58,8 +72,8 @@ async function getRevisionDiff(
   let newBlameItems: RevisionDiff[] = [];
 
   const rawDiff = isAsync ?
-    await diffCharsAsync(olderRev.content, latestRev.content) :
-    await diffCharsWebworkersAsync(olderRev.content, latestRev.content);
+    await diffCharsWebworkersAsync(olderRev.content, latestRev.content) :
+    diffChars(olderRev.content, latestRev.content);
 
   const diff: RevisionDiff[] = rawDiff.map(d => ({
                       text: d.value,
