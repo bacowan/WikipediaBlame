@@ -84,18 +84,19 @@ async function getRevisionDiff(
   let blameIndex = { itemIndex: 0, charIndex: 0 }
   let diffIndex = { itemIndex: 0, charIndex: 0 }
   
-  while (blameIndex.itemIndex < previousRevisionDiffs.length) {
+  while (blameIndex.itemIndex < previousRevisionDiffs.length || diffIndex.itemIndex < diff.length) {
     const blameItem = previousRevisionDiffs[blameIndex.itemIndex];
     const diffItem = diff[diffIndex.itemIndex];
-    if (blameItem.type === "unchanged") {
+    if (blameItem === undefined || blameItem.type === "unchanged") {
       if (diffItem.type === "remove") {
         newBlameItems.push({
-          text: "",
+          text: diffItem.text,
           type: "remove",
           revision: newerRev
         });
         diffIndex.charIndex = 0;
         diffIndex.itemIndex++;
+        blameIndex = advanceIndex(blameIndex, previousRevisionDiffs, 0);
       }
       else {
         const textLength = Math.min(
@@ -127,7 +128,7 @@ function advanceIndex(oldIndex: ArrayCharIndex, array: RevisionDiff[], count: nu
   charIndex += count;
 
   while (itemIndex < array.length && (
-          array[itemIndex].type === "remove" ||
+          //array[itemIndex].type === "remove" ||
           charIndex >= array[itemIndex].text.length
         )) {
     if (array[itemIndex].type !== "remove") {

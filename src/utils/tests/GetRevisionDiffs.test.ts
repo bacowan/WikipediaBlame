@@ -98,7 +98,7 @@ describe('getRevisionDiffs', () => {
             const progress = firstResult.value as RevisionDiffProgress;
             expect(progress.revisionDiffs).toEqual([
                 {
-                    text: "some ",
+                    text: "added ",
                     type: "add",
                     revision: newRevision
                 },
