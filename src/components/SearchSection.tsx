@@ -1,3 +1,4 @@
+import Revision from "../structures/Revision";
 import { AttachNumberOrdinal } from "../utils/StringUtils";
 import Collapsable from "./Collapsable";
 import OptionsSection from "./OptionsSection";
@@ -9,17 +10,20 @@ interface SearchSectionParams {
     onSearch: (searchVal: string) => void,
     isAsync: boolean,
     revsAtATime: number,
+    lastComparedRevision: Revision | null,
     setIsAsync: React.Dispatch<React.SetStateAction<boolean>>,
     setRevsAtATime: React.Dispatch<React.SetStateAction<number>>
 }
 
-function SearchSection({articleName, setArticleName, onSearch, isAsync, revsAtATime, setIsAsync, setRevsAtATime}: SearchSectionParams) {
+function SearchSection({articleName, setArticleName, onSearch, isAsync, revsAtATime, lastComparedRevision, setIsAsync, setRevsAtATime}: SearchSectionParams) {
     return <div className="search-column">
       <div className='search-row'>
         <label>
           Article Name: <input value={articleName} onChange={(e) => setArticleName(e.target.value)}/>
         </label>
-        <button className='blame-button' onClick={() => onSearch(articleName)}>Blame</button>
+        <button className='blame-button' onClick={() => onSearch(articleName)}>
+          { lastComparedRevision === null ? "Blame" : "Continue from revision " + lastComparedRevision.id }
+        </button>
       </div>
       <div className="search-row">
         <Collapsable text="Advanced Options" className="options-collapsable">
