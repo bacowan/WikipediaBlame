@@ -4,7 +4,6 @@ import { Err, Ok, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
 
 export interface Options {
-  isAsync: boolean,
   revsAtATime: number
 }
 

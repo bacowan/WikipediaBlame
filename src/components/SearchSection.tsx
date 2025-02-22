@@ -9,14 +9,12 @@ interface SearchSectionParams {
     displayedArticleName: string,
     setArticleName: React.Dispatch<React.SetStateAction<string>>,
     onSearch: (searchVal: string) => void,
-    isAsync: boolean,
     revsAtATime: number,
     lastComparedRevision: Revision | null,
-    setIsAsync: React.Dispatch<React.SetStateAction<boolean>>,
     setRevsAtATime: React.Dispatch<React.SetStateAction<number>>
 }
 
-function SearchSection({articleName, displayedArticleName, setArticleName, onSearch, isAsync, revsAtATime, lastComparedRevision, setIsAsync, setRevsAtATime}: SearchSectionParams) {
+function SearchSection({articleName, displayedArticleName, setArticleName, onSearch, revsAtATime, lastComparedRevision, setRevsAtATime}: SearchSectionParams) {
     return <div className="search-column">
       <div className='search-row'>
         <label>
@@ -31,7 +29,7 @@ function SearchSection({articleName, displayedArticleName, setArticleName, onSea
       </div>
       <div className="search-row">
         <Collapsable text="Advanced Options" className="options-collapsable">
-          <OptionsSection isAsync={isAsync} revsAtATime={revsAtATime} setIsAsync={setIsAsync} setRevsAtATime={setRevsAtATime}/>
+          <OptionsSection revsAtATime={revsAtATime} setRevsAtATime={setRevsAtATime}/>
         </Collapsable>
       </div>
     </div>

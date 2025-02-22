@@ -20,7 +20,6 @@ function App() {
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
   const [isHelpShown, setIsHelpShown] = useState(false);
-  const [isAsync, setIsAsync] = useState(true);
   const [revsAtATime, setRevsAtATime] = useState(Constants.maxRevsAtATime);
 
   const abortController = useRef<AbortController>();
@@ -66,7 +65,7 @@ function App() {
         const revisions = await getRevisionsForArticle(
           name,
           existingAttributions.lastComparedRevision?.id ?? null,
-          { isAsync, revsAtATime: Clip(revsAtATime, Constants.minRevsAtATime, Constants.maxRevsAtATime) },
+          { revsAtATime: Clip(revsAtATime, Constants.minRevsAtATime, Constants.maxRevsAtATime) },
           abortController.current.signal
         );
 
@@ -74,7 +73,7 @@ function App() {
           // TODO: Error handling
         }
         else {
-          const revisionDiffsGenerator = getRevisionAttributions(revisions.value, existingAttributions, abortController.current.signal, isAsync);
+          const revisionDiffsGenerator = getRevisionAttributions(revisions.value, existingAttributions, abortController.current.signal);
           for await (const diffProgress of revisionDiffsGenerator) {
             setDiffProgress({
               completed: diffProgress.completed,
@@ -106,10 +105,8 @@ function App() {
           displayedArticleName={displayedArticleName}
           setArticleName={setArticleName}
           onSearch={Blame}
-          isAsync={isAsync}
           revsAtATime={revsAtATime}
           lastComparedRevision={textAttributions.lastComparedRevision}
-          setIsAsync={setIsAsync}
           setRevsAtATime={setRevsAtATime}/> :
           <SearchProgressBar articleName={articleName} progress={diffProgress} onCancel={cancel}/>
       }
