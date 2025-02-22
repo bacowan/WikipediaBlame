@@ -25,7 +25,7 @@ function DiffElement({ attribution, isSelectedRevision, isHoveredRevision, setSe
     }
 
     return <span
-            className={`blame-${attribution.revision === null ? "add" : "unchanged"} ${isSelectedRevision ? "selected" : ""} ${isHoveredRevision ? "hovered" : ""}`}
+            className={`${attribution.revision !== null && "blame-add"} ${isSelectedRevision ? "selected" : ""} ${isHoveredRevision ? "hovered" : ""}`}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onClick={onClick}>

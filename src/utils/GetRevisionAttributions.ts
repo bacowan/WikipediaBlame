@@ -30,8 +30,9 @@ export async function* getRevisionAttributions(
   }
   
   let firstRevToCompare: number;
-  if (!existingAttributions) {
-    existingAttributions = {
+  let newAttributions: TextAttributions;
+  if (!existingAttributions || existingAttributions.attributions.length === 0) {
+    newAttributions = {
       latestText: revisions[0].content,
       attributions: Array.from(revisions[0].content, c => ({ char: c, revision: null })),
       lastComparedRevision: revisions[0]
@@ -39,6 +40,11 @@ export async function* getRevisionAttributions(
     firstRevToCompare = 1;
   }
   else {
+    newAttributions = {
+      latestText: existingAttributions.latestText,
+      attributions: Array.from(existingAttributions.attributions),
+      lastComparedRevision: existingAttributions.lastComparedRevision
+    }; // copy attributions since we will be yielding copys of it later
     firstRevToCompare = 0;
   }
 
@@ -46,22 +52,27 @@ export async function* getRevisionAttributions(
   yield {
     completed: 0,
     total: revisions.length - firstRevToCompare,
-    attributions: existingAttributions
+    attributions: newAttributions
   }
 
   for (let revision of revisions.slice(firstRevToCompare)) {
+    newAttributions = {
+      latestText: newAttributions.latestText,
+      attributions: Array.from(newAttributions.attributions),
+      lastComparedRevision: newAttributions.lastComparedRevision
+    }; // copy attributions since we will be yielding copys of it later
     const diff = isAsync
-      ? await diffCharsWebworkersAsync(revision.content, existingAttributions.latestText)
-      : diffChars(revision.content, existingAttributions.latestText);
+      ? await diffCharsWebworkersAsync(revision.content, newAttributions.latestText)
+      : diffChars(revision.content, newAttributions.latestText);
     const charDiffs = diff
       .flatMap(d => Array.from(d.value).map(char => ({ char, added: d.added, removed: d.removed })))
       .filter(d => !d.removed);
     for (let i = 0; i < charDiffs.length; i++) {
-      if (existingAttributions.attributions[i].revision === null && charDiffs[i].added) {
-        existingAttributions.attributions[i].revision = existingAttributions.lastComparedRevision;
+      if (newAttributions.attributions[i].revision === null && charDiffs[i].added) {
+        newAttributions.attributions[i].revision = newAttributions.lastComparedRevision;
       }
     }
-    existingAttributions.lastComparedRevision = revision;
+    newAttributions.lastComparedRevision = revision;
     
     if (abortSignal?.aborted) {
       throw new AbortedError("Diff process was aborted");
@@ -70,7 +81,7 @@ export async function* getRevisionAttributions(
     yield {
       completed: ++completedCount,
       total: revisions.length - firstRevToCompare,
-      attributions: existingAttributions
+      attributions: newAttributions
     }
   }
 }
