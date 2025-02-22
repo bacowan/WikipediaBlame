@@ -1,5 +1,4 @@
 import Revision from "../structures/Revision";
-import { AttachNumberOrdinal } from "../utils/StringUtils";
 import Collapsable from "./Collapsable";
 import OptionsSection from "./OptionsSection";
 import "./SearchSection.css";

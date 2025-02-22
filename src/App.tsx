@@ -98,6 +98,7 @@ function App() {
 
   return (
     <>
+      <a id="fork-me" href="https://github.com/bacowan/WikipediaBlame"><img decoding="async" width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" loading="lazy"/></a>
       <h1>Wikipedia Blame <span className='help-icon' onClick={showHelp}>ℹ️</span></h1>
       {diffProgress === null ?
         <SearchSection
