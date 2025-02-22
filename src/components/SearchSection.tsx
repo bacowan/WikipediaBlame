@@ -6,6 +6,7 @@ import "./SearchSection.css";
 
 interface SearchSectionParams {
     articleName: string,
+    displayedArticleName: string,
     setArticleName: React.Dispatch<React.SetStateAction<string>>,
     onSearch: (searchVal: string) => void,
     isAsync: boolean,
@@ -15,14 +16,17 @@ interface SearchSectionParams {
     setRevsAtATime: React.Dispatch<React.SetStateAction<number>>
 }
 
-function SearchSection({articleName, setArticleName, onSearch, isAsync, revsAtATime, lastComparedRevision, setIsAsync, setRevsAtATime}: SearchSectionParams) {
+function SearchSection({articleName, displayedArticleName, setArticleName, onSearch, isAsync, revsAtATime, lastComparedRevision, setIsAsync, setRevsAtATime}: SearchSectionParams) {
     return <div className="search-column">
       <div className='search-row'>
         <label>
           Article Name: <input value={articleName} onChange={(e) => setArticleName(e.target.value)}/>
         </label>
         <button className='blame-button' onClick={() => onSearch(articleName)}>
-          { lastComparedRevision === null ? "Blame" : "Continue from revision " + lastComparedRevision.id }
+          {
+            lastComparedRevision === null || displayedArticleName !== articleName
+              ? "Blame"
+              : "Continue from revision " + lastComparedRevision.id }
         </button>
       </div>
       <div className="search-row">

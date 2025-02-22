@@ -13,6 +13,7 @@ import { Clip } from './utils/NumberUtils';
 
 function App() {
 
+  const [displayedArticleName, setDisplayedArticleName] = useState("");
   const [articleName, setArticleName] = useState("");
   const [textAttributions, setTextAttributions] = useState<TextAttributions>({ latestText: "", lastComparedRevision: null, attributions: [] });
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
@@ -50,12 +51,21 @@ function App() {
       abortController.current?.abort();
       abortController.current = new AbortController();
 
+      let existingAttributions: TextAttributions;
+      if (name !== displayedArticleName) {
+        existingAttributions = { latestText: "", lastComparedRevision: null, attributions: [] };
+      }
+      else {
+        existingAttributions = textAttributions;
+      }
+
       setDiffProgress({state: 'indeterminate'});
+      setDisplayedArticleName(name);
 
       try {
         const revisions = await getRevisionsForArticle(
           name,
-          textAttributions.lastComparedRevision?.id ?? null,
+          existingAttributions.lastComparedRevision?.id ?? null,
           { isAsync, revsAtATime: Clip(revsAtATime, Constants.minRevsAtATime, Constants.maxRevsAtATime) },
           abortController.current.signal
         );
@@ -64,7 +74,7 @@ function App() {
           // TODO: Error handling
         }
         else {
-          const revisionDiffsGenerator = getRevisionAttributions(revisions.value, textAttributions, abortController.current.signal, isAsync);
+          const revisionDiffsGenerator = getRevisionAttributions(revisions.value, existingAttributions, abortController.current.signal, isAsync);
           for await (const diffProgress of revisionDiffsGenerator) {
             setDiffProgress({
               completed: diffProgress.completed,
@@ -93,6 +103,7 @@ function App() {
       {diffProgress === null ?
         <SearchSection
           articleName={articleName}
+          displayedArticleName={displayedArticleName}
           setArticleName={setArticleName}
           onSearch={Blame}
           isAsync={isAsync}
