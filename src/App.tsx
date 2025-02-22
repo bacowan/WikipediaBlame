@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
 import './App.css'
-import RevisionDiff from './structures/RevisionDiff';
 import DiffElement from './components/DiffElement';
 import Revision from './structures/Revision';
 import RevisionDetails from './components/RevisionDetails';
@@ -79,7 +78,7 @@ function App() {
       }
       catch (e) {
         // TODO
-        alert(e);
+        console.error(e);
       }
     }
   }

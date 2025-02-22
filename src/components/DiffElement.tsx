@@ -1,4 +1,3 @@
-import RevisionDiff from "../structures/RevisionDiff";
 import Revision from "../structures/Revision";
 import "./DiffElement.css";
 import { TextAttribution } from "../utils/GetRevisionAttributions";
