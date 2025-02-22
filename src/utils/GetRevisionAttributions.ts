@@ -1,10 +1,152 @@
-import RevisionDiff from "../structures/RevisionDiff";
-import { BlankOk, Err, Result } from "../structures/Result";
 import Revision from "../structures/Revision";
 import { diffChars, diffCharsWebworkersAsync } from "./DiffUtils";
 import AbortedError from "../errors/AbortedError";
 
+export interface RevisionAttributionProgress {
+  completed: number,
+  total: number,
+  attributions: TextAttributions
+}
+
+export interface TextAttribution {
+  char: string,
+  revision: Revision | null
+}
+
+export interface TextAttributions {
+  latestText: string,
+  lastComparedRevision: Revision | null,
+  attributions: TextAttribution[]
+}
+
+export async function* getRevisionAttributions(
+    revisions: Revision[],
+    existingAttributions?: TextAttributions,
+    abortSignal?: AbortSignal,
+    isAsync?: boolean) : AsyncGenerator<RevisionAttributionProgress, void, void> {
+
+  if (isAsync === undefined) {
+    isAsync = true;
+  }
+  
+  let firstRevToCompare: number;
+  if (!existingAttributions) {
+    existingAttributions = {
+      latestText: revisions[0].content,
+      attributions: Array.from(revisions[0].content, c => ({ char: c, revision: null })),
+      lastComparedRevision: revisions[0]
+    };
+    firstRevToCompare = 1;
+  }
+  else {
+    firstRevToCompare = 0;
+  }
+
+  let completedCount = 0;
+  yield {
+    completed: 0,
+    total: revisions.length - firstRevToCompare,
+    attributions: existingAttributions
+  }
+
+  for (let revision of revisions.slice(firstRevToCompare)) {
+    const diff = isAsync
+      ? await diffCharsWebworkersAsync(revision.content, existingAttributions.latestText)
+      : diffChars(revision.content, existingAttributions.latestText);
+    const charDiffs = diff
+      .flatMap(d => Array.from(d.value).map(char => ({ char, added: d.added, removed: d.removed })))
+      .filter(d => !d.removed);
+    for (let i = 0; i < charDiffs.length; i++) {
+      if (existingAttributions.attributions[i].revision === null && charDiffs[i].added) {
+        existingAttributions.attributions[i].revision = existingAttributions.lastComparedRevision;
+      }
+    }
+    existingAttributions.lastComparedRevision = revision;
+    
+    if (abortSignal?.aborted) {
+      throw new AbortedError("Diff process was aborted");
+    }
+
+    yield {
+      completed: ++completedCount,
+      total: revisions.length - firstRevToCompare,
+      attributions: existingAttributions
+    }
+  }
+}
+
+/*export interface TextAttribution {
+  char: string,
+  change: "added" | "removed" | "unchanged",
+  revision: Revision
+}
+
+export interface Blame {
+  newestText: string,
+  oldestText: string,
+  additions: { char: string, revision: Revision, changed: boolean }[],
+  removals: { char: string, revision: Revision }[]
+}
+
 export interface RevisionDiffProgress {
+  completed: number,
+  total: number,
+  blame: Blame
+}
+
+export async function* getRevisionDiffs(
+  revisions: Revision[],
+  existingBlame: Blame | null,
+  abortSignal?: AbortSignal) : AsyncGenerator<RevisionDiffProgress, void, void> {
+    let blame: Blame;
+    let firstRevToCompare: number;
+    
+    if (existingBlame) {
+      blame = existingBlame;
+      firstRevToCompare = 0;
+    }
+    else {
+      blame = {
+        newestText: revisions[0].content,
+        oldestText: revisions[0].content,
+        additions: Array.from(revisions[0].content, char => ({ char, revision: revisions[0], changed: false })),
+        removals: []
+      };
+      firstRevToCompare = 1;
+    }
+
+    for (let revIndex = firstRevToCompare; revIndex < revisions.length; revIndex++) {
+      const previousRev = revisions[revIndex];
+      const previousText = previousRev.content;
+      const diff = await diffCharsWebworkersAsync(previousText, blame.newestText);
+      const charDiffs = diff.flatMap(d => Array.from(d.value).map(char => ({ char, added: d.added, removed: d.removed })));
+      let newChanges: Revision[] = [];
+      let textIndex = 0;
+      let blameIndex = 0;
+      let diffIndex = 0;
+      while (diffIndex < charDiffs.length) {
+        const charDiff = charDiffs[diffIndex];
+        const blameItem
+      }
+
+
+
+        if (part.removed) {
+          newChanges.push(...Array.from(part.value, () => previousRev));
+        }
+        else if (part.added) {
+          attribution.removals.push(...Array.from(part.value, (char) => ({ char, removedAt: revIndex - 1 })));
+          textIndex += part.value.length;
+        }
+      }
+    }
+}
+
+
+
+
+
+export interface RevisionDiffProgressxxx {
   completed: number,
   total: number,
   revisionDiffs: RevisionDiff[],
@@ -12,7 +154,7 @@ export interface RevisionDiffProgress {
   comparedRevId: number
 }
 
-export async function* getRevisionDiffs(
+export async function* getRevisionDiffsxxx(
     latestRev: Revision | null,
     revsToDiff: Revision[],
     previousRevisionDiffs: RevisionDiff[],
@@ -138,4 +280,4 @@ function advanceIndex(oldIndex: ArrayCharIndex, array: RevisionDiff[], count: nu
   }
 
   return { itemIndex, charIndex };
-}
+}*/

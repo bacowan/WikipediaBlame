@@ -6,22 +6,16 @@ import Revision from './structures/Revision';
 import RevisionDetails from './components/RevisionDetails';
 import SearchSection from './components/SearchSection';
 import SearchProgressBar, { Progress } from './components/SearchProgressBar';
-import { getRevisionDiffs } from './utils/GetRevisionDiffs';
+import { getRevisionAttributions, TextAttributions } from './utils/GetRevisionAttributions';
 import { getRevisionsForArticle } from './utils/WikipediaApiUtils';
 import HelpPage from './components/HelpPage';
 import Constants from './constants';
 import { Clip } from './utils/NumberUtils';
 
-interface ArticleSource {
-  revisionDiffs: RevisionDiff[],
-  oldestComparedRevId: number | null
-  revsCompared: number
-}
-
 function App() {
 
   const [articleName, setArticleName] = useState("");
-  const [articleSource, setArticleSource] = useState<ArticleSource>({revisionDiffs: [], revsCompared: 0, oldestComparedRevId: null});
+  const [textAttributions, setTextAttributions] = useState<TextAttributions>({ latestText: "", lastComparedRevision: null, attributions: [] });
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
   const [hoveredRevision, setHoveredRevision] = useState<Revision | null>(null);
   const [diffProgress, setDiffProgress] = useState<Progress | null>(null);
@@ -44,14 +38,14 @@ function App() {
   }
 
   const formattedBlames = useMemo(() => {
-    return articleSource.revisionDiffs.map((b, i) => <DiffElement
+    return textAttributions.attributions.map((b, i) => <DiffElement
       key={i}
-      blameItem={b}
+      attribution={b}
       isSelectedRevision={b.revision != null && selectedRevision != null && b.revision.id === selectedRevision.id}
       isHoveredRevision={b.revision != null && hoveredRevision != null && b.revision.id === hoveredRevision.id}
       setSelectedRevision={setSelectedRevision}
       setHoveredRevision={setHoveredRevision}/>)
-  }, [articleSource, selectedRevision, hoveredRevision]);
+  }, [textAttributions, selectedRevision, hoveredRevision]);
 
   async function Blame(name: string) {
     if (abortController.current !== null) {
@@ -63,7 +57,7 @@ function App() {
       try {
         const revisions = await getRevisionsForArticle(
           name,
-          articleSource.oldestComparedRevId,
+          textAttributions.lastComparedRevision?.id ?? null,
           { isAsync, revsAtATime: Clip(revsAtATime, Constants.minRevsAtATime, Constants.maxRevsAtATime) },
           abortController.current.signal
         );
@@ -73,18 +67,14 @@ function App() {
         }
         else {
           setLatestRev((r) => r === null ? revisions.value[0] : r);
-          const revisionDiffsGenerator = getRevisionDiffs(latestRev, revisions.value, articleSource.revisionDiffs, isAsync, abortController.current.signal);
+          const revisionDiffsGenerator = getRevisionAttributions(revisions.value, textAttributions, abortController.current.signal, isAsync);
           for await (const diffProgress of revisionDiffsGenerator) {
             setDiffProgress({
               completed: diffProgress.completed,
               total: diffProgress.total,
               state: "determinate"
             });
-            setArticleSource({
-              revisionDiffs: diffProgress.revisionDiffs,
-              oldestComparedRevId: diffProgress.comparedRevId,
-              revsCompared: diffProgress.revsCompared
-            });
+            setTextAttributions(diffProgress.attributions);
           }
           setDiffProgress(null);
         }
@@ -108,7 +98,6 @@ function App() {
           articleName={articleName}
           setArticleName={setArticleName}
           onSearch={Blame}
-          revsCompared={articleSource.revsCompared}
           isAsync={isAsync}
           revsAtATime={revsAtATime}
           setIsAsync={setIsAsync}

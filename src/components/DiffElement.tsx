@@ -1,30 +1,23 @@
 import RevisionDiff from "../structures/RevisionDiff";
 import Revision from "../structures/Revision";
 import "./DiffElement.css";
+import { TextAttribution } from "../utils/GetRevisionAttributions";
 
 interface DiffElementProps {
-    blameItem: RevisionDiff,
+    attribution: TextAttribution,
     isSelectedRevision: boolean,
     isHoveredRevision: boolean,
     setSelectedRevision: (revision: Revision | null) => void,
     setHoveredRevision: (revision: Revision | null) => void
 }
 
-function DiffElement({ blameItem, isSelectedRevision, isHoveredRevision, setSelectedRevision, setHoveredRevision }: DiffElementProps) {
-    let text;
-    if (blameItem.type === "remove") {
-      text = "\u00A0\u00A0\u00A0";
-    }
-    else {
-      text = blameItem.text;
-    }
-
+function DiffElement({ attribution, isSelectedRevision, isHoveredRevision, setSelectedRevision, setHoveredRevision }: DiffElementProps) {
     function onClick() {
-        setSelectedRevision(blameItem.revision);
+        setSelectedRevision(attribution.revision);
     }
 
     function onMouseEnter() {
-      setHoveredRevision(blameItem.revision);
+      setHoveredRevision(attribution.revision);
     }
 
     function onMouseLeave() {
@@ -32,11 +25,11 @@ function DiffElement({ blameItem, isSelectedRevision, isHoveredRevision, setSele
     }
 
     return <span
-            className={`blame-${blameItem.type} ${isSelectedRevision ? "selected" : ""} ${isHoveredRevision ? "hovered" : ""}`}
+            className={`blame-${attribution.revision === null ? "add" : "unchanged"} ${isSelectedRevision ? "selected" : ""} ${isHoveredRevision ? "hovered" : ""}`}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             onClick={onClick}>
-        {text}
+        {attribution.char}
     </span>
 }
 
